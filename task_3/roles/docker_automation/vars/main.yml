@@ -1,0 +1,5 @@
+docker_user: "{{ ansible_user_id }}"
+docker_image_name: task_1
+docker_image_tag: latest
+docker_container_name: task_1_container
+script_to_check: task_1.py

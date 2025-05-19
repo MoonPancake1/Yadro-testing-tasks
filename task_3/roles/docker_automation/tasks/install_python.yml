@@ -1,0 +1,60 @@
+- name: Check Python 3 availability
+  stat:
+    path: /usr/bin/python3
+  register: python3_stat
+
+- name: Set Python path variable
+  set_fact:
+    python_path: "{{ '/usr/bin/python3' if python3_stat.stat.exists else 'python3' }}"
+
+- name: Install Python 3 (Debian/Ubuntu)
+  apt:
+    name: python3
+    state: present
+  when: 
+    - not python3_stat.stat.exists
+    - ansible_os_family == 'Debian'
+  become: yes
+
+- name: Install Python 3 (RedHat/CentOS)
+  yum:
+    name: python3
+    state: present
+  when:
+    - not python3_stat.stat.exists
+    - ansible_os_family == 'RedHat'
+  become: yes
+
+- name: Install Python 3 (MacOS)
+  homebrew:
+    name: python
+    state: present
+  when:
+    - not python3_stat.stat.exists
+    - ansible_os_family == 'Darwin'
+
+- name: Get final Python path
+  command: which python3
+  register: final_python
+  changed_when: false
+
+- name: Set virtualenv path
+  set_fact:
+    venv_path: "{{ playbook_dir }}/venv"
+
+- name: Create virtual environment
+  command: "{{ final_python.stdout }} -m venv {{ venv_path }}"
+  args:
+    creates: "{{ venv_path }}/bin/activate"
+
+- name: Upgrade pip in virtualenv
+  command: "{{ venv_path }}/bin/pip install --upgrade pip"
+  delegate_to: localhost
+
+- name: Install 'packaging' in virtualenv manually
+  command: "{{ venv_path }}/bin/pip install packaging"
+  delegate_to: localhost
+
+- name: Install requirements in virtualenv manually
+  command: "{{ venv_path }}/bin/pip install -r {{ playbook_dir }}/requirements.txt"
+  delegate_to: localhost

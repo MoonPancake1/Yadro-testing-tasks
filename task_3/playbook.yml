@@ -1,0 +1,4 @@
+- hosts: target
+  become: no
+  roles:
+    - docker_automation

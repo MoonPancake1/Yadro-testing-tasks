@@ -1,0 +1,54 @@
+- name: Ensure build directory exists
+  file:
+    path: /tmp/docker_build
+    state: directory
+
+- name: Copy necessary files for Docker build
+  copy:
+    src: "{{ playbook_dir }}/{{ item }}"
+    dest: "/tmp/docker_build/"
+  loop:
+    - "task_1.py"
+    - "requirements.txt"
+    - "Dockerfile"
+
+- name: Build Docker image
+  docker_image:
+    name: "{{ docker_image_name }}"
+    tag: "{{ docker_image_tag }}"
+    source: build
+    build:
+      path: /tmp/docker_build
+    state: present
+
+- name: Run Docker container
+  docker_container:
+    name: "{{ docker_container_name }}"
+    image: "{{ docker_image_name }}:{{ docker_image_tag }}"
+    state: started
+    detach: yes
+
+- name: Check container status
+  docker_container_info:
+    name: "{{ docker_container_name }}"
+  register: container_info
+
+- name: Wait for container to finish
+  command: docker wait {{ docker_container_name }}
+  register: container_exit
+  changed_when: false
+
+- name: Get container logs
+  command: docker logs {{ docker_container_name }}
+  register: container_logs
+  changed_when: false
+  ignore_errors: true
+
+- name: Show container logs
+  debug:
+    msg: |
+      Container stdout logs:
+      {{ container_logs.stdout }}
+
+      Container stderr logs:
+      {{ container_logs.stderr }}
